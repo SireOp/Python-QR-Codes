@@ -61,7 +61,7 @@ def make_barcode_image(data: str) -> Image.Image:
 def combine_blocks(blocks: list[Image.Image], output_file="barcodes_sheet.png"):
     """Stack multiple barcode+label blocks vertically into one sheet."""
     if not blocks:
-        print("⚠️ No barcodes to save.")
+        print("No barcodes to save.")
         return
 
     max_w = max(img.width for img in blocks)
@@ -76,10 +76,10 @@ def combine_blocks(blocks: list[Image.Image], output_file="barcodes_sheet.png"):
         img.close()
 
     sheet.save(output_file)
-    print(f"✅ Saved all barcodes to {output_file}")
+    print(f"Saved all barcodes to {output_file}")
 
 if __name__ == "__main__":
-    print("📦 Multi-Barcode Sheet (type 'done' to finish)\n")
+    print("Multi-Barcode Sheet (type 'done' to finish)\n")
     blocks: list[Image.Image] = []
 
     while True:
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     if blocks:
         combine_blocks(blocks, output_file="barcodes_sheet.png")
     else:
-        print("⚠️ Nothing entered. No file created.")
+        print("Nothing entered. No file created.")
