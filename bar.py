@@ -10,11 +10,16 @@ LABEL_SIZE = 20       # font size for the label text
 BG = "white"
 FG = "black"
 
+# --- physical size control ---
+MAX_LENGTH_INCHES = 4.25   # max printed length
+DPI = 300                  # target print DPI
+MAX_WIDTH_PX = int(MAX_LENGTH_INCHES * DPI)
+
+
 def make_barcode_image(data: str) -> Image.Image:
     """Return a PIL image: barcode with its text label underneath as one block."""
-    # Render the barcode directly to a PIL image (no temp files)
     code = barcode.get("code128", data, writer=ImageWriter())
-    # Tweak module size/text as desired
+
     writer_opts = {
         "module_height": 20.0,      # bar height
         "module_width": 0.4,        # bar thickness
@@ -25,12 +30,20 @@ def make_barcode_image(data: str) -> Image.Image:
         "text_distance": 0,
         "write_text": False,
     }
+
+    # Render barcode to an image
     barcode_img = code.render(writer_options=writer_opts)  # PIL.Image
 
-    # Prepare label image
+    # --- enforce max physical length (4.25") ---
+    if barcode_img.width > MAX_WIDTH_PX:
+        scale = MAX_WIDTH_PX / barcode_img.width
+        new_w = MAX_WIDTH_PX
+        new_h = int(barcode_img.height * scale)
+        barcode_img = barcode_img.resize((new_w, new_h), Image.LANCZOS)
+
+    # Prepare label font
     try:
-        # Use a default font (monospace not guaranteed in container)
-        font = ImageFont.load_default(size=LABEL_SIZE)  # type: ignore
+        font = ImageFont.load_default(size=LABEL_SIZE)  # type: ignore[arg-type]
     except TypeError:
         font = ImageFont.load_default()
 
@@ -45,6 +58,7 @@ def make_barcode_image(data: str) -> Image.Image:
     block_h = PADDING_TOP + barcode_img.height + LABEL_GAP + label_h + PADDING_TOP
 
     block = Image.new("RGB", (block_w, block_h), BG)
+
     # center barcode
     x_bar = (block_w - barcode_img.width) // 2
     y_bar = PADDING_TOP
@@ -57,6 +71,7 @@ def make_barcode_image(data: str) -> Image.Image:
     draw.text((x_lbl, y_lbl), data, font=font, fill=FG)
 
     return block
+
 
 def combine_blocks(blocks: list[Image.Image], output_file="barcodes_sheet.png"):
     """Stack multiple barcode+label blocks vertically into one sheet."""
@@ -75,8 +90,10 @@ def combine_blocks(blocks: list[Image.Image], output_file="barcodes_sheet.png"):
         y += img.height + (SPACING if i < len(blocks) - 1 else 0)
         img.close()
 
-    sheet.save(output_file)
-    print(f"Saved all barcodes to {output_file}")
+    # Save with explicit DPI so 4.25" = MAX_WIDTH_PX / DPI on paper
+    sheet.save(output_file, dpi=(DPI, DPI))
+    print(f"Saved all barcodes to {output_file} at {DPI} DPI")
+
 
 if __name__ == "__main__":
     print("Multi-Barcode Sheet (type 'done' to finish)\n")
